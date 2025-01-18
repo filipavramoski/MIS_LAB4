@@ -19,7 +19,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
   double _latitude = 42.004186;
   double _longitude = 21.409904;
   void _selectLocation() async {
-    // Show a map modal where users can pick a location
+    
     final result = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
