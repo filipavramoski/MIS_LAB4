@@ -54,7 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _requestLocationPermission() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      // Location services are not enabled
+      
       return;
     }
 
@@ -62,13 +62,13 @@ class _HomeScreenState extends State<HomeScreen> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        // Permission denied
+       
         return;
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      // Permission denied forever
+     
       return;
     }
   }
