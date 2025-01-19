@@ -13,7 +13,7 @@ class DistanceService {
           event.latitude,
           event.longitude);
 
-      return distanceInMeters / 1000; // Convert to kilometers
+      return distanceInMeters / 1000;
     } catch (e) {
       print('Error calculating distance: $e');
       return -1;

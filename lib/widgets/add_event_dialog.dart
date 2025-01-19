@@ -5,8 +5,12 @@ import '../models/exam_event.dart';
 
 class AddEventDialog extends StatefulWidget {
   final Function(ExamEvent) onEventAdded;
+  final LatLng? initialLocation;
 
-  AddEventDialog({required this.onEventAdded});
+  AddEventDialog({
+    required this.onEventAdded,
+    this.initialLocation,
+  });
 
   @override
   _AddEventDialogState createState() => _AddEventDialogState();
@@ -16,32 +20,13 @@ class _AddEventDialogState extends State<AddEventDialog> {
   final _titleController = TextEditingController();
   final _locationController = TextEditingController();
   DateTime _selectedDateTime = DateTime.now();
-  double _latitude = 42.004186;
-  double _longitude = 21.409904;
-  void _selectLocation() async {
-    // Show a map modal where users can pick a location
-    final result = await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        content: Container(
-          height: 300,
-          width: 300,
-          child: GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: LatLng(_latitude, _longitude),
-              zoom: 15,
-            ),
-            onTap: (LatLng position) {
-              setState(() {
-                _latitude = position.latitude;
-                _longitude = position.longitude;
-              });
-              Navigator.pop(context, true);
-            },
-          ),
-        ),
-      ),
-    );
+  LatLng? _selectedLocation;
+  GoogleMapController? _mapController;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedLocation = widget.initialLocation ?? LatLng(42.004186, 21.409904);
   }
 
   @override
@@ -58,38 +43,41 @@ class _AddEventDialogState extends State<AddEventDialog> {
             ),
             TextField(
               controller: _locationController,
-              decoration: InputDecoration(labelText: 'Location'),
+              decoration: InputDecoration(labelText: 'Location Description'),
             ),
             ListTile(
               title: Text('Date & Time'),
               subtitle: Text(_selectedDateTime.toString()),
-              onTap: () async {
-                final date = await showDatePicker(
-                  context: context,
-                  initialDate: _selectedDateTime,
-                  firstDate: DateTime.now(),
-                  lastDate: DateTime(2025),
-                );
-                if (date != null) {
-                  final time = await showTimePicker(
-                    context: context,
-                    initialTime: TimeOfDay.fromDateTime(_selectedDateTime),
-                  );
-                  if (time != null) {
-                    setState(() {
-                      _selectedDateTime = DateTime(
-                        date.year,
-                        date.month,
-                        date.day,
-                        time.hour,
-                        time.minute,
-                      );
-                    });
-                  }
-                }
-              },
+              onTap: _selectDateTime,
             ),
-            // Add fields for latitude and longitude if needed
+            Container(
+              height: 200,
+              margin: EdgeInsets.only(top: 16),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: GoogleMap(
+                  initialCameraPosition: CameraPosition(
+                    target: _selectedLocation!,
+                    zoom: 15,
+                  ),
+                  onMapCreated: (controller) => _mapController = controller,
+                  onTap: (LatLng position) {
+                    setState(() => _selectedLocation = position);
+                    _mapController?.animateCamera(
+                      CameraUpdate.newLatLng(position),
+                    );
+                  },
+                  markers: _selectedLocation != null
+                      ? {
+                          Marker(
+                            markerId: MarkerId('selected_location'),
+                            position: _selectedLocation!,
+                          ),
+                        }
+                      : {},
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -100,19 +88,52 @@ class _AddEventDialogState extends State<AddEventDialog> {
         ),
         TextButton(
           child: Text('Add'),
-          onPressed: () {
-            final event = ExamEvent(
-              title: _titleController.text,
-              dateTime: _selectedDateTime,
-              location: _locationController.text,
-              latitude: _latitude,
-              longitude: _longitude,
-            );
-            widget.onEventAdded(event);
-            Navigator.of(context).pop();
-          },
+          onPressed: _submitEvent,
         ),
       ],
     );
+  }
+
+  void _selectDateTime() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _selectedDateTime,
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2025),
+    );
+
+    if (date != null) {
+      final time = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(_selectedDateTime),
+      );
+
+      if (time != null) {
+        setState(() {
+          _selectedDateTime = DateTime(
+            date.year,
+            date.month,
+            date.day,
+            time.hour,
+            time.minute,
+          );
+        });
+      }
+    }
+  }
+
+  void _submitEvent() {
+    if (_selectedLocation == null) return;
+
+    final event = ExamEvent(
+      title: _titleController.text,
+      dateTime: _selectedDateTime,
+      location: _locationController.text,
+      latitude: _selectedLocation!.latitude,
+      longitude: _selectedLocation!.longitude,
+    );
+
+    widget.onEventAdded(event);
+    Navigator.of(context).pop();
   }
 }
